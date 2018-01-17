@@ -1,6 +1,6 @@
 #%%
 import numpy as np
-from numpy import zeros, random, sqrt, mean
+from numpy import zeros, random, sqrt, mean, percentile
 from numpy import transpose as t
 from numpy.linalg import inv
 from matplotlib import pyplot as plt
@@ -64,8 +64,8 @@ for i in range(num_plots):
     labels.append('a = ' + str(a_list[i]))
 
 plt.legend(labels)
-plt.ylabel('value of rho')
-plt.xlabel('rejection frequency')
+plt.xlabel('value of rho')
+plt.ylabel('rejection frequency')
 plt.show()
 
 
@@ -75,3 +75,49 @@ EXERCISE 2
 '''
 k = 10
 grid = [i * 0.25 for i in range(1000)]
+S = 5000
+
+results = zeros(len(grid))
+counter = 0
+for r_b0 in grid:
+    random.seed(2110)
+    LR = zeros(S)
+    psi_1 = random.chisquare(1, size=S)
+    psi_k = random.chisquare(k-1, size=S)
+    LR = 1/2 * (psi_k + psi_1 - r_b0 + \
+             sqrt(((psi_k + psi_1 + r_b0) ** 2) - 4 * r_b0 * psi_k))
+    results[counter] = percentile(LR, q=95)
+    counter += 1
+print(results)
+
+plt.plot(grid, results)
+plt.xlabel('r(β)')
+plt.ylabel('95% criticial value')
+plt.show()
+
+
+#%%
+'''
+EXERCISE 4
+'''
+k = 4
+grid = [i * 0.25 for i in range(1000)]
+S = 5000
+
+results = zeros(len(grid))
+counter = 0
+for r_b0 in grid:
+    random.seed(2110)
+    LR = zeros(S)
+    psi_1 = random.chisquare(1, size=S)
+    psi_k = random.chisquare(k - 1, size=S)
+    LR = 1 / 2 * (psi_k + psi_1 - r_b0 +
+                  sqrt(((psi_k + psi_1 + r_b0) ** 2) - 4 * r_b0 * psi_k))
+    results[counter] = percentile(LR, q=95)
+    counter += 1
+print(results)
+
+plt.plot(grid, results)
+plt.xlabel('r(β)')
+plt.ylabel('95% criticial value')
+plt.show()
