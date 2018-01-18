@@ -152,24 +152,22 @@ data.columns = ["age", "age2", "ed", "exper", "exper2", "nearc2", "nearc4", "nea
 y = data.loc[:, 'wage']
 x = data.loc[:, 'ed']
 z = data.loc[:, ("nearc2", "nearc4", "nearc4a", "nearc4b")]
-w = data.loc[:, ("exper", "exper2", "race", "smsa", "South")]
+w = np.hstack((data.loc[:, ("exper", "exper2", "race", "smsa", "South")].values, 
+             np.ones(data.shape[0]).reshape((data.shape[0], 1))))
 
 #%%
 
 # Ex 5a, 2SLS and AR
 np.random.seed(1000)
 
-betas = np.arange(-50, 50, 1)
-
-new_x = np.array(lm(x, w).fit().fittedvalues)
-new_y = np.array(lm(y, w).fit().fittedvalues)
-new_z = np.array([lm(np.array(z)[:, 0], w).fit().fittedvalues, 
-                 lm(np.array(z)[:, 1], w).fit().fittedvalues,
-                 lm(np.array(z)[:, 2], w).fit().fittedvalues,
-                 lm(np.array(z)[:, 3], w).fit().fittedvalues]).T
+# t-stat confidence set
+mw = np.identity(w.shape[0]) - np.array(w) @ inv(np.array(w).T @ np.array(w)) @ np.array(w).T
+new_x = mw @ np.array(x)
+new_y = mw @ np.array(y)
+new_z = mw @ np.array(z)
 
 # t-statistic
-pz_5a = (np.outer(new_z[:, 0], new_z[:, 0].T)  * ((new_z[:, 0].T @ new_z[:, 0]) ** (- 1)))
+pz_5a = np.outer(new_z[:, 0], new_z[:, 0].T) * ((new_z[:, 0].T @ new_z[:, 0]) ** (- 1))
 beta_2sls = ((new_x.T @ pz_5a @ new_x) ** (- 1)) * new_x.T @ pz_5a @ new_y
 var_2sls = ((new_y - new_x * beta_2sls).T @ (new_y - new_x * beta_2sls) * ((new_x.T
            @ pz_5a @ new_x) ** (- 1))) / (3010 - 1)
@@ -177,52 +175,99 @@ se_2sls = np.sqrt(var_2sls)
 t_stat_5a = beta_2sls / se_2sls
 ci_2sls_5a = (beta_2sls - 1.96 * se_2sls, beta_2sls + 1.96 * se_2sls)
 
-for i in betas:
-  
+# AR onfidence set
+betas = np.arange(-10, 10, 0.25)
+ar_5a = np.zeros([len(betas), ])
 
+for i in range(len(betas)):
+  error = new_y - new_x * betas[i]
+  ar_5a[i] = (error.T @ pz_5a @ error) / (error.T @ (np.identity(pz_5a.shape[0]) - pz_5a)
+  @ error) * ((pz_5a.shape[0] - 1) / 1)
 
+np.mean(ar_5a > (chi2.ppf(0.95, 1) / 1))
 
-z_5a = mw @ np.array(z.loc[:, 'nearc2'])
-pz_5a = np.outer(z_5a, np.dot(np.int(np.dot(t(z_5a), z_5a)) ** np.int(-1), t(z_5a)))
-mz_5a = np.identity(pz_5a.shape[0]) - pz_5a
-ar_5a = (t(y_5a) @ pz_5a @ y_5a) / (t(y_5a) @ mz_5a @ y_5a) * ((pz_5a.shape[0] - 1) / 1)
-
-# alternative
-ar_regr_5a = lm(y, z_5a).fit()
-ar_regr_5a.f_test('x1 = 0')
-
-# confidence intervals using AR?
 
 #%%
 
-# Ex 5e, 2SLS
+# Exercise 5c
+# first stage F-statistic
+
+f_stat = (new_x.T @ pz_5a @ new_x) / (new_x.T @ (np.identity(pz_5a.shape[0]) - pz_5a) @ 
+          new_x) * ((pz_5a.shape[0] - 1) / 1)
+
+
+betas_5c = np.arange(10, 20, 0.25)
+ar_5c = np.zeros([len(betas_5c), ])
+
+for i in range(len(betas_5c)):
+  error = new_y - new_x * betas_5c[i]
+  ar_5c[i] = (error.T @ pz_5a @ error) / (error.T @ (np.identity(pz_5a.shape[0]) - pz_5a)
+  @ error) * ((pz_5a.shape[0] - 1) / 1)
+
+
+
+#%%
+
+# Exercise 5e
 
 np.random.seed(1000)
 
-fs_5e = lm(x, pd.concat([w, z], axis=1), hasconst=True).fit()
-print(fs_5e.summary())
+# t-statistic
+pz_5e = new_z @ inv(new_z.T @ new_z) @ new_z.T
+beta_2sls_5e = ((new_x.T @ pz_5e @ new_x) ** (- 1)) * new_x.T @ pz_5e @ new_y
+var_2sls_5e = ((new_y - new_x * beta_2sls_5e).T @ (new_y - new_x * beta_2sls_5e) * ((new_x.T
+           @ pz_5e @ new_x) ** (- 1))) / (3010 - 1)
+se_2sls_5e = np.sqrt(var_2sls_5e)
+t_stat_5e = beta_2sls_5e / se_2sls_5e
+ci_2sls_5e = (beta_2sls_5e - 1.96 * se_2sls_5e, beta_2sls_5e + 1.96 * se_2sls_5e)
 
-ss_5e = lm(y, pd.concat([fs_5e.fittedvalues.rename('ed'), w, z], axis=1),
-           hasconst=True).fit()
-print(ss_5e.summary())
+# AR, LM, LR confidence set
+betas_5e = np.round(np.arange(-1, 2, 0.1), decimals=1)
+ar_5e = np.zeros([len(betas_5e), ])
+lm_5e = np.zeros([len(betas_5e), ])
+lr_5e = np.zeros([len(betas_5e), ])
+lr_5e_outcome = np.zeros([len(betas_5e), ])
 
-ss_5e.conf_int(alpha=0.05)
-ss_5e.t_test('ed = 0') # gives us same results
+for i in range(len(betas_5e)):
+  error = new_y - new_x * betas_5e[i]
+  
+  # AR confidence set
+  ar_5e[i] = (error.T @ pz_5e @ error) / (error.T @ (np.identity(pz_5e.shape[0]) - pz_5e)
+  @ error) * ((pz_5e.shape[0] - 1) / 4)
+  
+  # LM confidence set
+  rho_hat = (error.T @ (np.identity(pz_5e.shape[0]) - pz_5e) @ new_x) / (error.T @ 
+     (np.identity(pz_5e.shape[0]) - pz_5e) @ error)
+  pi_b0 = (inv(new_z.T @ new_z) @ new_z.T @ (new_x - error * rho_hat)).reshape(4, 1)
+  pz_pi = (new_z @ pi_b0 @ pi_b0.T @ new_z.T) * ((pi_b0.T @ new_z.T @ new_z @ pi_b0) ** (-1))
+  lm_5e[i] = (error.T @ pz_pi @ error) / (error.T @ (np.identity(pz_5e.shape[0]) - pz_5e) @ 
+       error) * (pz_5e.shape[0] - 4)
+  
+  # LR confidence set
+  psi_k = np.random.chisquare(3, size=mc_rep)
+  psi_1 = np.random.chisquare(1, size=mc_rep)
+  r_b0 = (pi_b0.T @ new_z.T @ new_z @ pi_b0) / (((new_x.T @ 
+         (np.identity(pz_5e.shape[0]) - pz_5e) @ new_x) - (((error.T @ 
+         (np.identity(pz_5e.shape[0]) - pz_5e) @ new_x) ** 2) / 
+         (error.T @ (np.identity(pz_5e.shape[0]) - pz_5e) @ error))) / (pz_5e.shape[0] - 4))
+  
+  lr_b0 = (psi_k + psi_1 - r_b0 + np.sqrt((psi_k + psi_1 + r_b0) ** 2 - 4 * 
+           r_b0 * psi_k)) / 2
+  crit_value = np.percentile(lr_b0, q=95)
+  lr_5e[i] = (1 / 2) * (k * ar_5e[i] - r_b0 + np.sqrt((k * ar_5e[i] + r_b0) ** (2) - 
+         4 * r_b0 * (k * ar_5e[i] - lm_5e[i])))
+  lr_5e_outcome[i] = lr_5e[i] > crit_value
 
-# Ex 5e, AR
 
-mw = w_np @ inv(t(w_np) @ w_np) @ t(w_np)
-z_5e = mw @ np.array(z)
-y_5e = mw @ np.array(y)
-pz_5e = z_5e @ inv(t(z_5e) @ z_5e) @ t(z_5e)
-mz_5e = np.identity(pz_5e.shape[0]) - pz_5e
-ar_5e = (t(y_5e) @ pz_5e @ y_5e) / (t(y_5e) @ mz_5e @ y_5e) * ((pz_5e.shape[0] - 4) / 4)
+outcome_5e = pd.DataFrame([betas_5e, ar_5e, lm_5e, lr_5e, lr_5e_outcome]).T
 
-# alternative
-ar_regr_5e = lm(y, z_5e).fit()
-ar_regr_5e.f_test('x1 = 0, x2 = 0, x3 = 0, x4 = 0')
 
-# confidence intervals using AR?
+
+
+
+
+
+
 
 
 
