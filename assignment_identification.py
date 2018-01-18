@@ -254,8 +254,8 @@ for i in range(len(betas_5e)):
   lr_b0 = (psi_k + psi_1 - r_b0 + np.sqrt((psi_k + psi_1 + r_b0) ** 2 - 4 * 
            r_b0 * psi_k)) / 2
   crit_value = np.percentile(lr_b0, q=95)
-  lr_5e[i] = (1 / 2) * (k * ar_5e[i] - r_b0 + np.sqrt((k * ar_5e[i] + r_b0) ** (2) - 
-         4 * r_b0 * (k * ar_5e[i] - lm_5e[i])))
+  lr_5e[i] = (1 / 2) * (4 * ar_5e[i] - r_b0 + np.sqrt((4 * ar_5e[i] + r_b0) ** (2) - 
+         4 * r_b0 * (4 * ar_5e[i] - lm_5e[i])))
   lr_5e_outcome[i] = lr_5e[i] > crit_value
 
 
