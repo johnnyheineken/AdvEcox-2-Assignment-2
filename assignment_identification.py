@@ -176,7 +176,7 @@ t_stat_5a = beta_2sls / se_2sls
 ci_2sls_5a = (beta_2sls - 1.96 * se_2sls, beta_2sls + 1.96 * se_2sls)
 
 # AR onfidence set
-betas = np.arange(-10, 10, 0.25)
+betas = np.arange(-2, 2, 0.1)
 ar_5a = np.zeros([len(betas), ])
 
 for i in range(len(betas)):
@@ -185,6 +185,8 @@ for i in range(len(betas)):
   @ error) * ((pz_5a.shape[0] - 1) / 1)
 
 np.mean(ar_5a > (chi2.ppf(0.95, 1) / 1))
+outcome_5a = pd.DataFrame([betas, ar_5a > (chi2.ppf(0.95, 1) / 1)]).T
+
 
 
 #%%
@@ -222,7 +224,7 @@ t_stat_5e = beta_2sls_5e / se_2sls_5e
 ci_2sls_5e = (beta_2sls_5e - 1.96 * se_2sls_5e, beta_2sls_5e + 1.96 * se_2sls_5e)
 
 # AR, LM, LR confidence set
-betas_5e = np.round(np.arange(-1, 2, 0.1), decimals=1)
+betas_5e = np.round(np.arange(-1, 2, 0.1), decimals=2)
 ar_5e = np.zeros([len(betas_5e), ])
 lm_5e = np.zeros([len(betas_5e), ])
 lr_5e = np.zeros([len(betas_5e), ])
@@ -259,10 +261,13 @@ for i in range(len(betas_5e)):
   lr_5e_outcome[i] = lr_5e[i] > crit_value
 
 
-outcome_5e = pd.DataFrame([betas_5e, ar_5e, lm_5e, lr_5e, lr_5e_outcome]).T
+outcome_5e = pd.DataFrame([betas_5e, ar_5e, ar_5e > (chi2.ppf(0.95, 4) / 4), lm_5e,
+                           lm_5e > chi2.ppf(0.95, 1), lr_5e, lr_5e_outcome]).T
 
 
-
+#%%
+  
+np.min(ar_5e)
 
 
 
